@@ -1,0 +1,144 @@
+<html>
+<head>
+
+  <title>Mystery Model</title>
+  <style>
+    .dot {
+      stroke: #313E50; /*circle border*/
+      fill: steelblue; /*circle color*/
+      r: 7; /*circle radius*/
+    }
+  </style>
+
+</head>
+
+<body>
+<svg id="plot"></svg>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.10.2/d3.min.js"></script>
+
+
+<script>
+
+function renderAxes(data, xName, yName) {
+  //define margins on the plot -- this will give room for axes labels, titles
+  var margin = { top: 20, right: 20, bottom: 30, left: 60 };
+
+  // total dimensions are 500x300
+  var width = 500 - margin.left - margin.right;
+  var height = 300 - margin.top - margin.bottom;
+
+
+
+  // value -> display
+  xScale = d3.scaleLinear().range([0, width]);
+  (yScale = d3
+    .scaleLinear()
+    .range([height, 0])), // in SVG, y=0 is at the top, so we switch the order
+
+  // now the range [0, width] maps to [0, max(data)]
+  //xScale.domain([d3.min(data, xValue), d3.max(data, xValue)]);
+  //yScale.domain([d3.min(data, xValue), d3.max(data, yValue)]);
+
+  var svg = d3
+    .select("#scatterArea")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  xAxis = d3.axisBottom(xScale); //axis object
+  yAxis = d3.axisLeft(yScale);
+
+  // x-axis
+  svg
+    .append("g")
+    .attr("class", "x axis")
+    //take X to bottom of SVG
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis);
+
+  // y-axis
+  svg.append("g").attr("class", "y axis").call(yAxis);
+
+  return {
+    svg: svg,
+    xScale: xScale,
+    yScale: yScale,
+    xAxis: xAxis,
+    yAxis: yAxis
+  };
+}
+
+function scatterPoints(ax, data, xName, yName) {
+  // data struct -> x value
+  var xValue = function(d) {
+    return d[xName];
+  };
+  var yValue = function(d) {
+    return d[yName];
+  };
+
+  // set domain again in case data changed bounds
+  xScale.domain([d3.min(data, xValue), d3.max(data, xValue)]);
+  yScale.domain([d3.min(data, xValue), d3.max(data, yValue)]);
+
+  //redraw axis
+  ax.svg.selectAll(".x.axis").call(ax.xAxis);
+  ax.svg.selectAll(".y.axis").call(ax.yAxis);
+
+  //add data
+  ax.svg
+    .selectAll(".dot")
+    .data(data)
+    .enter()
+    .append("circle")
+    .attr("class", "dot");
+
+  //update data
+  ax.svg
+    .selectAll(".dot")
+    .attr("cx", function(d) {
+      return ax.xScale(ax.xValue(d));
+    })
+    .transition()
+    .duration(1000)
+    .attr("cy", function(d) {
+      return ax.yScale(ax.yValue(d));
+    });
+
+  // try adding events here (mouseover to black)
+  
+  
+  
+  //remove dots
+  ax.svg
+    .selectAll(".dot")
+    .data(data)
+    .exit()
+    .transition()
+    .duration(1000)
+    .style("opacity", 1e-6)
+    .attr("cy", function(d) {
+      return 0;
+    })
+    .remove();
+}
+
+
+var ax = renderAxes(scatterData);
+
+d3.json("notebooks/model_stats.json", function(data){
+  data.forEach(function(val, idx, arr){
+    arr[idx]["idx"] = idx
+  })
+  scatterPoints(ax, data, "idx", "score_with_hints");
+})
+
+</script>
+
+
+</body>
+
+
+</html>
